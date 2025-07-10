@@ -5,6 +5,7 @@ import sqlite3
 from flask import Flask, render_template, request, jsonify
 from ultralytics import YOLO
 from datetime import datetime
+import uuid  # Для генерации уникальных имен файлов
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'static/results'
@@ -20,6 +21,8 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         timestamp TEXT NOT NULL,
         filename TEXT,
+        original_img TEXT,
+        thumbnail TEXT,
         result_img TEXT,
         giraffe_count INTEGER
     )''')
@@ -46,32 +49,54 @@ def detect_giraffes():
         filename = file.filename
         img_bytes = file.read()
         img_array = np.frombuffer(img_bytes, np.uint8)
-        img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+        original_img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
         
         # Детекция только жирафов (класс 23 в COCO)
-        results = model.predict(img, classes=[23], conf=0.5)
+        results = model.predict(original_img, classes=[23], conf=0.5)
         
-        # Генерируем уникальное имя файла
+        # Генерируем уникальный идентификатор для файлов
+        unique_id = uuid.uuid4().hex
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        result_filename = f'result_{timestamp}.jpg'
-        result_path = os.path.join(app.config['UPLOAD_FOLDER'], result_filename)
         
-        # Обрабатываем результаты
+        # Сохраняем оригинальное изображение
+        original_filename = f'original_{timestamp}_{unique_id}.jpg'
+        original_path = os.path.join(app.config['UPLOAD_FOLDER'], original_filename)
+        cv2.imwrite(original_path, original_img)
+        
+        # Создаем миниатюру оригинального изображения
+        thumbnail_filename = f'thumbnail_{timestamp}_{unique_id}.jpg'
+        thumbnail_path = os.path.join(app.config['UPLOAD_FOLDER'], thumbnail_filename)
+        thumbnail_img = cv2.resize(original_img, (300, 200))
+        cv2.imwrite(thumbnail_path, thumbnail_img)
+        
+        # Обрабатываем результаты детекции
         if len(results) > 0 and hasattr(results[0], 'plot'):
             result_img = results[0].plot()
-            cv2.imwrite(result_path, result_img)
             giraffe_count = len(results[0].boxes)
         else:
+            result_img = original_img
             giraffe_count = 0
-            cv2.imwrite(result_path, img)  # Сохраняем оригинал, если ничего не найдено
+        
+        # Сохраняем изображение с результатами
+        result_filename = f'result_{timestamp}_{unique_id}.jpg'
+        result_path = os.path.join(app.config['UPLOAD_FOLDER'], result_filename)
+        cv2.imwrite(result_path, result_img)
         
         # Сохраняем запрос в базе данных
         conn = sqlite3.connect('history.db')
         c = conn.cursor()
-        c.execute('''INSERT INTO requests (timestamp, filename, result_img, giraffe_count)
-                     VALUES (?, ?, ?, ?)''', 
+        c.execute('''INSERT INTO requests (
+                        timestamp, 
+                        filename, 
+                        original_img, 
+                        thumbnail, 
+                        result_img, 
+                        giraffe_count
+                     ) VALUES (?, ?, ?, ?, ?, ?)''', 
                   (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 
                    filename, 
+                   original_filename, 
+                   thumbnail_filename, 
                    result_filename, 
                    giraffe_count))
         conn.commit()
@@ -103,8 +128,10 @@ def show_history():
                 'id': row[0],
                 'timestamp': row[1],
                 'filename': row[2],
-                'result_img': os.path.join(app.config['UPLOAD_FOLDER'], row[3]),
-                'count': row[4]
+                'original_img': row[3],
+                'thumbnail': row[4],
+                'result_img': row[5],
+                'count': row[6]
             })
         
         return render_template('history.html', history=formatted_history)

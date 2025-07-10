@@ -5,10 +5,11 @@
     <style>
         body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
         .container { text-align: center; }
-        input, button { margin: 10px 0; padding: 10px; }
+        input, button { margin: 10px 0; padding: 10px; width: 100%; max-width: 300px; }
         #resultImage { max-width: 100%; margin-top: 20px; border: 1px solid #ddd; }
         #stats { font-size: 1.2em; font-weight: bold; margin: 15px 0; }
-        .history-link { display: block; margin-top: 20px; }
+        .history-link { display: block; margin-top: 20px; padding: 10px; background: #4CAF50; color: white; text-decoration: none; border-radius: 4px; }
+        .loading { display: none; margin: 20px auto; }
     </style>
 </head>
 <body>
@@ -16,6 +17,10 @@
         <h1>Автоматический учет жирафов</h1>
         <input type="file" id="imageInput" accept="image/*">
         <button onclick="processImage()">Начать детекцию</button>
+        <div class="loading" id="loadingSpinner">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/b/b1/Loading_icon.gif" alt="Загрузка..." width="50">
+            <p>Обработка изображения...</p>
+        </div>
         
         <div id="stats">Обнаружено жирафов: -</div>
         <img id="resultImage" src="" alt="Результат детекции">
@@ -31,6 +36,10 @@
                 return;
             }
             
+            // Показываем индикатор загрузки
+            document.getElementById('loadingSpinner').style.display = 'block';
+            document.getElementById('stats').textContent = 'Обработка...';
+            
             const formData = new FormData();
             formData.append('image', fileInput.files[0]);
             
@@ -41,7 +50,7 @@
                 });
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error(`Ошибка сервера: ${response.status}`);
                 }
                 
                 const data = await response.json();
@@ -51,9 +60,13 @@
                 // Обновление изображения с таймштампом для избежания кэширования
                 document.getElementById('resultImage').src = 
                     data.result_img + '?' + new Date().getTime();
+                
             } catch (error) {
                 console.error('Ошибка:', error);
-                alert('Произошла ошибка при обработке изображения: ' + error.message);
+                alert('Произошла ошибка: ' + error.message);
+            } finally {
+                // Скрываем индикатор загрузки
+                document.getElementById('loadingSpinner').style.display = 'none';
             }
         }
     </script>
