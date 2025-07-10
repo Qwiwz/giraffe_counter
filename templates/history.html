@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>История запросов</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        img { max-width: 300px; max-height: 200px; }
+        .back-btn { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-btn">← На главную</a>
+    <h1>История запросов</h1>
+    
+    {% if history %}
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Время запроса</th>
+                    <th>Имя файла</th>
+                    <th>Результат</th>
+                    <th>Количество жирафов</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in history %}
+                <tr>
+                    <td>{{ item.id }}</td>
+                    <td>{{ item.timestamp }}</td>
+                    <td>{{ item.filename }}</td>
+                    <td>
+                        {% if item.result_img %}
+                            <img src="{{ url_for('static', filename='results/' + item.result_img.split('/')[-1]) }}" alt="Result">
+                        {% else %}
+                            Нет изображения
+                        {% endif %}
+                    </td>
+                    <td>{{ item.count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>История запросов пуста</p>
+    {% endif %}
+</body>
+</html>
