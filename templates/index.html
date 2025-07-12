@@ -1,36 +1,387 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Учет жирафов в зоопарке</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-        .container { text-align: center; }
-        input, button { margin: 10px 0; padding: 10px; width: 100%; max-width: 300px; }
-        #resultImage { max-width: 100%; margin-top: 20px; border: 1px solid #ddd; }
-        #stats { font-size: 1.2em; font-weight: bold; margin: 15px 0; }
-        .history-link { display: block; margin-top: 20px; padding: 10px; background: #4CAF50; color: white; text-decoration: none; border-radius: 4px; }
-        .loading { display: none; margin: 20px auto; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #6a93cb 0%, #a4bfef 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 800px;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .logo {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto 20px;
+            background: url('https://cdn-icons-png.flaticon.com/512/1998/1998659.png') no-repeat center center;
+            background-size: contain;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 2.5rem;
+        }
+        
+        .description {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+        
+        .upload-area {
+            border: 2px dashed #3498db;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .upload-area:hover {
+            background-color: #f8f9fa;
+            border-color: #2980b9;
+        }
+        
+        .upload-area i {
+            font-size: 48px;
+            color: #3498db;
+            margin-bottom: 15px;
+        }
+        
+        .upload-area p {
+            margin-bottom: 15px;
+            color: #7f8c8d;
+        }
+        
+        #fileInfo {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-top: 10px;
+        }
+        
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+            margin: 10px 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn i {
+            margin-right: 10px;
+        }
+        
+        .btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .result-area {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            transition: all 0.5s ease;
+        }
+        
+        #stats {
+            font-size: 1.5rem;
+            color: #2c3e50;
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .giraffe-icon {
+            margin: 0 10px;
+            font-size: 1.8rem;
+        }
+        
+        #resultImage {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            margin-top: 15px;
+            transition: transform 0.3s;
+        }
+        
+        #resultImage:hover {
+            transform: scale(1.02);
+        }
+        
+        .history-link {
+            display: inline-flex;
+            align-items: center;
+            margin-top: 20px;
+            padding: 12px 25px;
+            background: #2c3e50;
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            transition: all 0.3s;
+        }
+        
+        .history-link:hover {
+            background: #1a252f;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .history-link i {
+            margin-right: 8px;
+        }
+        
+        .loading {
+            display: none;
+            margin: 20px auto;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(52, 152, 219, 0.2);
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            margin-top: 15px;
+            color: #3498db;
+            font-weight: bold;
+        }
+        
+        .features {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin: 30px 0;
+        }
+        
+        .feature {
+            flex: 1;
+            min-width: 200px;
+            margin: 10px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+        }
+        
+        .feature i {
+            font-size: 36px;
+            color: #3498db;
+            margin-bottom: 15px;
+        }
+        
+        .feature h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .feature p {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        footer {
+            margin-top: 30px;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        
+        .tech-badge {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin: 0 5px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .features {
+                flex-direction: column;
+            }
+            
+            footer {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .tech-stack {
+                margin-top: 15px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <div class="logo"></div>
         <h1>Автоматический учет жирафов</h1>
-        <input type="file" id="imageInput" accept="image/*">
-        <button onclick="processImage()">Начать детекцию</button>
-        <div class="loading" id="loadingSpinner">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/b/b1/Loading_icon.gif" alt="Загрузка..." width="50">
-            <p>Обработка изображения...</p>
+        <p class="description">
+            Инновационная система для автоматического подсчета жирафов с использованием искусственного интеллекта.
+            Загрузите фотографию с жирафами, и наша система мгновенно определит их количество и выделит на изображении.
+        </p>
+        
+        <div class="features">
+            <div class="feature">
+                <i class="fas fa-brain"></i>
+                <h3>Искусственный интеллект</h3>
+                <p>Используем передовые нейросети YOLOv8 для точного распознавания</p>
+            </div>
+            <div class="feature">
+                <i class="fas fa-bolt"></i>
+                <h3>Мгновенный результат</h3>
+                <p>Обработка изображений за считанные секунды</p>
+            </div>
+            <div class="feature">
+                <i class="fas fa-history"></i>
+                <h3>История операций</h3>
+                <p>Все результаты сохраняются для последующего анализа</p>
+            </div>
         </div>
         
-        <div id="stats">Обнаружено жирафов: -</div>
-        <img id="resultImage" src="" alt="Результат детекции">
+        <div class="upload-area" id="uploadArea">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <p>Перетащите изображение сюда или нажмите для выбора файла</p>
+            <input type="file" id="imageInput" accept="image/*" hidden>
+            <button class="btn" onclick="document.getElementById('imageInput').click()">
+                <i class="fas fa-folder-open"></i> Выбрать файл
+            </button>
+            <div id="fileInfo"></div>
+        </div>
         
-        <a href="/history" class="history-link">Просмотреть историю запросов</a>
+        <button class="btn" onclick="processImage()" id="processBtn">
+            <i class="fas fa-search"></i> Начать детекцию
+        </button>
+        
+        <div class="loading" id="loadingSpinner">
+            <div class="spinner"></div>
+            <p class="loading-text">Обрабатываем изображение...</p>
+        </div>
+        
+        <div class="result-area" id="resultArea" style="display: none;">
+            <div id="stats">
+                <i class="fas fa-giraffe giraffe-icon"></i>
+                Обнаружено жирафов: <span id="countValue">0</span>
+                <i class="fas fa-giraffe giraffe-icon"></i>
+            </div>
+            <img id="resultImage" src="" alt="Результат детекции">
+        </div>
+        
+        <a href="/history" class="history-link">
+            <i class="fas fa-history"></i> Просмотреть историю запросов
+        </a>
+        
+        <footer>
+            <div>
+                &copy; 2025 Система автоматизированного учета животных в зоопарке
+            </div>
+            <div class="tech-stack">
+                <span class="tech-badge">Python</span>
+                <span class="tech-badge">Flask</span>
+                <span class="tech-badge">YOLOv8</span>
+                <span class="tech-badge">OpenCV</span>
+                <span class="tech-badge">SQLite</span>
+            </div>
+        </footer>
     </div>
 
     <script>
+        // Обработка выбора файла
+        const fileInput = document.getElementById('imageInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const uploadArea = document.getElementById('uploadArea');
+        const resultArea = document.getElementById('resultArea');
+        const countValue = document.getElementById('countValue');
+        
+        fileInput.addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                fileInfo.textContent = `Выбран файл: ${this.files[0].name}`;
+                resultArea.style.display = 'none';
+            }
+        });
+        
+        // Drag and drop
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.style.borderColor = '#27ae60';
+            this.style.backgroundColor = '#f1f9ff';
+        });
+        
+        uploadArea.addEventListener('dragleave', function(e) {
+            this.style.borderColor = '#3498db';
+            this.style.backgroundColor = '';
+        });
+        
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.style.borderColor = '#3498db';
+            this.style.backgroundColor = '';
+            
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                fileInput.files = e.dataTransfer.files;
+                fileInfo.textContent = `Выбран файл: ${e.dataTransfer.files[0].name}`;
+                resultArea.style.display = 'none';
+            }
+        });
+        
+        // Функция обработки изображения
         async function processImage() {
-            const fileInput = document.getElementById('imageInput');
             if (!fileInput.files[0]) {
                 alert('Пожалуйста, выберите изображение');
                 return;
@@ -38,7 +389,9 @@
             
             // Показываем индикатор загрузки
             document.getElementById('loadingSpinner').style.display = 'block';
-            document.getElementById('stats').textContent = 'Обработка...';
+            document.getElementById('processBtn').disabled = true;
+            countValue.textContent = '0';
+            resultArea.style.display = 'none';
             
             const formData = new FormData();
             formData.append('image', fileInput.files[0]);
@@ -54,12 +407,17 @@
                 }
                 
                 const data = await response.json();
-                document.getElementById('stats').textContent = 
-                    `Обнаружено жирафов: ${data.count}`;
+                countValue.textContent = data.count;
                 
                 // Обновление изображения с таймштампом для избежания кэширования
                 document.getElementById('resultImage').src = 
                     data.result_img + '?' + new Date().getTime();
+                
+                // Показываем область с результатами
+                resultArea.style.display = 'block';
+                
+                // Плавная прокрутка к результатам
+                resultArea.scrollIntoView({ behavior: 'smooth' });
                 
             } catch (error) {
                 console.error('Ошибка:', error);
@@ -67,6 +425,7 @@
             } finally {
                 // Скрываем индикатор загрузки
                 document.getElementById('loadingSpinner').style.display = 'none';
+                document.getElementById('processBtn').disabled = false;
             }
         }
     </script>
