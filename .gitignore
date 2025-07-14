@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+.env
+
+# Данные и модели
+*.db
+*.pt
+*.onnx
+
+# Файлы изображений
+static/results/*
+!static/results/.gitkeep
+
+# Системные
+.DS_Store

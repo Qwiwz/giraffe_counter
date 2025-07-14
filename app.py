@@ -1,13 +1,11 @@
 import os
-import csv
 import cv2
 import numpy as np
 import sqlite3
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify
 from ultralytics import YOLO
 from datetime import datetime, timedelta
 import uuid
-from io import StringIO
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'static/results'
@@ -262,38 +260,6 @@ def delete_request(request_id):
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-@app.route('/history/export')
-def export_history():
-    """Экспорт истории в CSV"""
-    try:
-        conn = sqlite3.connect('history.db')
-        c = conn.cursor()
-        c.execute("SELECT * FROM requests ORDER BY timestamp DESC")
-        history = c.fetchall()
-        conn.close()
-        
-        # Создаем CSV в памяти
-        output = StringIO()
-        writer = csv.writer(output)
-        writer.writerow(['ID', 'Timestamp', 'Filename', 'Original Image', 
-                         'Thumbnail', 'Result Image', 'Giraffe Count'])
-        
-        for row in history:
-            writer.writerow(row)
-        
-        output.seek(0)
-        
-        # Возвращаем файл для скачивания
-        return send_file(
-            output,
-            mimetype='text/csv',
-            as_attachment=True,
-            download_name='giraffe_history.csv'
-        )
-    
-    except Exception as e:
-        return f"Export error: {str(e)}", 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
