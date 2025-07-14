@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>История запросов - Учет жирафов</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
             margin: 0;
@@ -443,6 +446,88 @@
                 padding: 5px 10px;
                 font-size: 0.8rem;
             }
+        
+        /* Новые стили для фильтров */
+        .filter-panel {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 200px;
+        }
+        
+        .filter-label {
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        
+        .filter-control {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        
+        .apply-filters {
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            align-self: flex-end;
+        }
+        
+        .apply-filters:hover {
+            background: #2980b9;
+        }
+        
+        .export-btn {
+            padding: 10px 20px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .export-btn:hover {
+            background: #219653;
+        }
+        
+        .delete-btn {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .delete-btn:hover {
+            background: #c0392b;
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+            height: 300px;
         }
     </style>
 </head>
@@ -461,32 +546,60 @@
         <div class="history-stats">
             <div class="stat-card">
                 <i class="fas fa-history"></i>
-                <div class="stat-value">24</div>
+                <div class="stat-value" id="totalRequests">{{ total_requests }}</div>
                 <div class="stat-label">Всего запросов</div>
             </div>
             <div class="stat-card">
                 <i class="fas fa-giraffe"></i>
-                <div class="stat-value">87</div>
+                <div class="stat-value" id="totalGiraffes">{{ total_giraffes }}</div>
                 <div class="stat-label">Обнаружено жирафов</div>
             </div>
             <div class="stat-card">
                 <i class="fas fa-calendar-day"></i>
-                <div class="stat-value">5</div>
+                <div class="stat-value" id="todayRequests">{{ today_requests }}</div>
                 <div class="stat-label">За сегодня</div>
             </div>
         </div>
         
-        <div class="history-controls">
-            <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" placeholder="Поиск по истории...">
+        <div class="chart-container">
+            <canvas id="historyChart"></canvas>
+        </div>
+        
+        <div class="filter-panel">
+            <div class="filter-group">
+                <label class="filter-label">Период</label>
+                <select id="dateFilter" class="filter-control">
+                    <option value="all" {% if date_filter == 'all' %}selected{% endif %}>Все время</option>
+                    <option value="today" {% if date_filter == 'today' %}selected{% endif %}>Сегодня</option>
+                    <option value="week" {% if date_filter == 'week' %}selected{% endif %}>Последняя неделя</option>
+                    <option value="month" {% if date_filter == 'month' %}selected{% endif %}>Последний месяц</option>
+                </select>
             </div>
-            <div class="filter-buttons">
-                <button class="filter-btn active">Все</button>
-                <button class="filter-btn">Сегодня</button>
-                <button class="filter-btn">Неделя</button>
-                <button class="filter-btn">Запросы > 5</button>
+            
+            <div class="filter-group">
+                <label class="filter-label">Минимум жирафов</label>
+                <select id="minCount" class="filter-control">
+                    <option value="0" {% if min_count == 0 %}selected{% endif %}>Любое количество</option>
+                    <option value="1" {% if min_count == 1 %}selected{% endif %}>1 и более</option>
+                    <option value="3" {% if min_count == 3 %}selected{% endif %}>3 и более</option>
+                    <option value="5" {% if min_count == 5 %}selected{% endif %}>5 и более</option>
+                    <option value="10" {% if min_count == 10 %}selected{% endif %}>10 и более</option>
+                </select>
             </div>
+            
+            <div class="filter-group">
+                <label class="filter-label">Поиск по имени файла</label>
+                <input type="text" id="searchQuery" class="filter-control" 
+                       placeholder="Введите название..." value="{{ search_query }}">
+            </div>
+            
+            <button class="apply-filters" onclick="applyFilters()">
+                <i class="fas fa-filter"></i> Применить фильтры
+            </button>
+            
+            <a href="/history/export" class="export-btn">
+                <i class="fas fa-file-export"></i> Экспорт в CSV
+            </a>
         </div>
         
         {% if history %}
@@ -535,6 +648,10 @@
                                 onclick="openModal(this.parentElement.parentElement.querySelector('img.thumbnail'), 'result')">
                                 <i class="fas fa-search"></i> Результат
                             </button>
+                            <button class="action-btn delete-btn" 
+                                onclick="deleteRequest({ item.id }, this)">
+                                <i class="fas fa-trash"></i> Удалить
+                            </button>
                         </td>
                     </tr>
                     {% endfor %}
@@ -542,15 +659,33 @@
             </table>
             
             <div class="pagination">
-                <button class="page-btn" disabled>
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-                <button class="page-btn active">1</button>
-                <button class="page-btn">2</button>
-                <button class="page-btn">3</button>
-                <button class="page-btn">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
+                {% if current_page > 1 %}
+                    <button class="page-btn" onclick="changePage({ current_page - 1 })">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                {% else %}
+                    <button class="page-btn" disabled>
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                {% endif %}
+                
+                {% for page_num in range(1, total_pages + 1) %}
+                    {% if page_num == current_page %}
+                        <button class="page-btn active">{{ page_num }}</button>
+                    {% else %}
+                        <button class="page-btn" onclick="changePage({{ page_num }})">{{ page_num }}</button>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if current_page < total_pages %}
+                    <button class="page-btn" onclick="changePage({ current_page + 1 })">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                {% else %}
+                    <button class="page-btn" disabled>
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                {% endif %}
             </div>
         {% else %}
             <div class="empty-history">
@@ -593,6 +728,87 @@
     <script>
         // Текущие данные модального окна
         let currentImageData = null;
+        
+        // Инициализация графика
+        function initChart() {
+            // В реальном приложении здесь будет запрос к API для получения данных
+            const ctx = document.getElementById('historyChart').getContext('2d');
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
+                    datasets: [{
+                        label: 'Запросы по дням',
+                        data: [12, 19, 8, 15, 14, 22, 10],
+                        backgroundColor: 'rgba(52, 152, 219, 0.5)',
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Функция применения фильтров
+        function applyFilters() {
+            const dateFilter = document.getElementById('dateFilter').value;
+            const minCount = document.getElementById('minCount').value;
+            const searchQuery = document.getElementById('searchQuery').value;
+            
+            // Формируем URL с параметрами
+            const params = new URLSearchParams({
+                date_filter: dateFilter,
+                min_count: minCount,
+                search: searchQuery,
+                page: 1
+            });
+            
+            window.location.href = `/history?${params.toString()}`;
+        }
+        
+        // Функция смены страницы
+        function changePage(page) {
+            const params = new URLSearchParams(window.location.search);
+            params.set('page', page);
+            window.location.href = `/history?${params.toString()}`;
+        }
+        
+        // Функция удаления запроса
+        function deleteRequest(requestId, button) {
+            if (confirm('Вы уверены, что хотите удалить этот запрос?')) {
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Удаление...';
+                
+                fetch(`/history/delete/${requestId}`, { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Удаляем строку из таблицы
+                            const row = button.closest('tr');
+                            row.style.opacity = '0.5';
+                            setTimeout(() => row.remove(), 500);
+                        } else {
+                            alert('Ошибка при удалении');
+                            button.disabled = false;
+                            button.innerHTML = '<i class="fas fa-trash"></i> Удалить';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Ошибка при удалении');
+                        button.disabled = false;
+                        button.innerHTML = '<i class="fas fa-trash"></i> Удалить';
+                    });
+            }
+        }
         
         // Функция открытия модального окна
         function openModal(element, imageType = 'original') {
@@ -665,14 +881,9 @@
             }
         });
         
-        // Фильтрация таблицы (демо-функция)
-        document.querySelectorAll('.filter-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                document.querySelectorAll('.filter-btn').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                this.classList.add('active');
-            });
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart();
         });
     </script>
 </body>

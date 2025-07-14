@@ -1,14 +1,17 @@
 import os
+import csv
 import cv2
 import numpy as np
 import sqlite3
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file
 from ultralytics import YOLO
-from datetime import datetime
-import uuid  # Для генерации уникальных имен файлов
+from datetime import datetime, timedelta
+import uuid
+from io import StringIO
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'static/results'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # Создаем необходимые директории
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -46,6 +49,14 @@ def detect_giraffes():
     
     try:
         file = request.files['image']
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
+            
+        # Проверка расширения файла
+        allowed_extensions = {'png', 'jpg', 'jpeg', 'gif'}
+        if '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() not in allowed_extensions:
+            return jsonify({'error': 'Invalid file type'}), 400
+        
         filename = file.filename
         img_bytes = file.read()
         img_array = np.frombuffer(img_bytes, np.uint8)
@@ -113,12 +124,70 @@ def detect_giraffes():
 
 @app.route('/history')
 def show_history():
-    """Функция для отображения истории запросов"""
+    """Функция для отображения истории запросов с фильтрацией"""
     try:
+        # Параметры фильтрации
+        date_filter = request.args.get('date_filter', 'all')
+        min_count = request.args.get('min_count', 0, type=int)
+        search_query = request.args.get('search', '')
+        page = request.args.get('page', 1, type=int)
+        per_page = 10
+        
         conn = sqlite3.connect('history.db')
         c = conn.cursor()
-        c.execute("SELECT * FROM requests ORDER BY timestamp DESC")
+        
+        # Базовый запрос
+        query = "SELECT * FROM requests WHERE 1=1"
+        params = []
+        
+        # Фильтр по дате
+        today = datetime.now().date()
+        if date_filter == 'today':
+            query += " AND DATE(timestamp) = ?"
+            params.append(today.strftime("%Y-%m-%d"))
+        elif date_filter == 'week':
+            week_ago = today - timedelta(days=7)
+            query += " AND DATE(timestamp) >= ?"
+            params.append(week_ago.strftime("%Y-%m-%d"))
+        elif date_filter == 'month':
+            month_ago = today - timedelta(days=30)
+            query += " AND DATE(timestamp) >= ?"
+            params.append(month_ago.strftime("%Y-%m-%d"))
+        
+        # Фильтр по количеству жирафов
+        if min_count > 0:
+            query += " AND giraffe_count >= ?"
+            params.append(min_count)
+        
+        # Поиск
+        if search_query:
+            query += " AND filename LIKE ?"
+            params.append(f'%{search_query}%')
+        
+        # Получаем общее количество записей
+        count_query = "SELECT COUNT(*) FROM (" + query + ")"
+        c.execute(count_query, params)
+        total_records = c.fetchone()[0]
+        
+        # Пагинация
+        query += " ORDER BY timestamp DESC LIMIT ? OFFSET ?"
+        offset = (page - 1) * per_page
+        params.extend([per_page, offset])
+        
+        c.execute(query, params)
         history = c.fetchall()
+        
+        # Получаем статистику
+        c.execute("SELECT COUNT(*) FROM requests")
+        total_requests = c.fetchone()[0]
+        
+        c.execute("SELECT SUM(giraffe_count) FROM requests")
+        total_giraffes = c.fetchone()[0] or 0
+        
+        c.execute("SELECT COUNT(*) FROM requests WHERE DATE(timestamp) = ?", 
+                 (today.strftime("%Y-%m-%d"),))
+        today_requests = c.fetchone()[0]
+        
         conn.close()
         
         # Форматируем данные для отображения
@@ -134,10 +203,97 @@ def show_history():
                 'count': row[6]
             })
         
-        return render_template('history.html', history=formatted_history)
+        # Рассчитываем общее количество страниц
+        total_pages = (total_records + per_page - 1) // per_page
+        
+        return render_template(
+            'history.html', 
+            history=formatted_history,
+            total_requests=total_requests,
+            total_giraffes=total_giraffes,
+            today_requests=today_requests,
+            current_page=page,
+            total_pages=total_pages,
+            date_filter=date_filter,
+            min_count=min_count,
+            search_query=search_query
+        )
     
     except Exception as e:
         return f"Database error: {str(e)}", 500
+
+@app.route('/history/<int:request_id>')
+def request_details(request_id):
+    """Страница деталей запроса"""
+    try:
+        conn = sqlite3.connect('history.db')
+        c = conn.cursor()
+        c.execute("SELECT * FROM requests WHERE id = ?", (request_id,))
+        row = c.fetchone()
+        conn.close()
+        
+        if row:
+            request_data = {
+                'id': row[0],
+                'timestamp': row[1],
+                'filename': row[2],
+                'original_img': row[3],
+                'thumbnail': row[4],
+                'result_img': row[5],
+                'count': row[6]
+            }
+            return render_template('request_details.html', request_data=request_data)
+        else:
+            return "Request not found", 404
+    
+    except Exception as e:
+        return f"Database error: {str(e)}", 500
+
+@app.route('/history/delete/<int:request_id>', methods=['POST'])
+def delete_request(request_id):
+    """Удаление записи из истории"""
+    try:
+        conn = sqlite3.connect('history.db')
+        c = conn.cursor()
+        c.execute("DELETE FROM requests WHERE id = ?", (request_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/history/export')
+def export_history():
+    """Экспорт истории в CSV"""
+    try:
+        conn = sqlite3.connect('history.db')
+        c = conn.cursor()
+        c.execute("SELECT * FROM requests ORDER BY timestamp DESC")
+        history = c.fetchall()
+        conn.close()
+        
+        # Создаем CSV в памяти
+        output = StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['ID', 'Timestamp', 'Filename', 'Original Image', 
+                         'Thumbnail', 'Result Image', 'Giraffe Count'])
+        
+        for row in history:
+            writer.writerow(row)
+        
+        output.seek(0)
+        
+        # Возвращаем файл для скачивания
+        return send_file(
+            output,
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name='giraffe_history.csv'
+        )
+    
+    except Exception as e:
+        return f"Export error: {str(e)}", 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

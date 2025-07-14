@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Детали запроса #{{ request_data.id }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #6a93cb 0%, #a4bfef 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #2c3e50;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px;
+            position: relative;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .logo {
+            width: 60px;
+            height: 60px;
+            background: url('https://cdn-icons-png.flaticon.com/512/1998/1998659.png') no-repeat center center;
+            background-size: contain;
+        }
+        
+        h1 {
+            font-size: 1.8rem;
+            color: #2c3e50;
+        }
+        
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
+        }
+        
+        .back-btn i {
+            margin-right: 8px;
+        }
+        
+        .back-btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(52, 152, 219, 0.4);
+        }
+        
+        .request-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .detail-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+        }
+        
+        .detail-card h2 {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+            color: #2c3e50;
+        }
+        
+        .detail-item {
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .detail-label {
+            font-weight: 500;
+            color: #7f8c8d;
+        }
+        
+        .detail-value {
+            font-weight: 600;
+        }
+        
+        .images-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .image-box {
+            text-align: center;
+        }
+        
+        .image-box img {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 10px;
+        }
+        
+        .image-title {
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        
+        footer {
+            margin-top: 40px;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            width: 100%;
+            text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+            .request-details {
+                grid-template-columns: 1fr;
+            }
+            
+            .images-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo-container">
+                <div class="logo"></div>
+                <h1>Детали запроса #{{ request_data.id }}</h1>
+            </div>
+            <a href="/history" class="back-btn">
+                <i class="fas fa-arrow-left"></i> Назад к истории
+            </a>
+        </div>
+        
+        <div class="request-details">
+            <div class="detail-card">
+                <h2>Информация о запросе</h2>
+                
+                <div class="detail-item">
+                    <span class="detail-label">ID запроса:</span>
+                    <span class="detail-value">#{{ request_data.id }}</span>
+                </div>
+                
+                <div class="detail-item">
+                    <span class="detail-label">Дата и время:</span>
+                    <span class="detail-value">{{ request_data.timestamp }}</span>
+                </div>
+                
+                <div class="detail-item">
+                    <span class="detail-label">Имя файла:</span>
+                    <span class="detail-value">{{ request_data.filename }}</span>
+                </div>
+                
+                <div class="detail-item">
+                    <span class="detail-label">Количество жирафов:</span>
+                    <span class="detail-value">
+                        <i class="fas fa-giraffe" style="color: #e67e22;"></i> 
+                        <strong>{{ request_data.count }}</strong>
+                    </span>
+                </div>
+            </div>
+            
+            <div class="detail-card">
+                <h2>Изображения</h2>
+                <div class="images-container">
+                    <div class="image-box">
+                        <div class="image-title">Оригинал</div>
+                        <img src="{{ url_for('static', filename='results/' + request_data.original_img) }}" 
+                             alt="Оригинальное изображение">
+                    </div>
+                    
+                    <div class="image-box">
+                        <div class="image-title">Результат обработки</div>
+                        <img src="{{ url_for('static', filename='results/' + request_data.result_img) }}" 
+                             alt="Результат обработки">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <div class="footer-content">
+                <div class="copyright">
+                    &copy; 2025 Система автоматизированного учета животных в зоопарке
+                </div>
+            </div>
+        </footer>
+    </div>
+</body>
+</html>
