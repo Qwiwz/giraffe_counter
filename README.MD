@@ -13,7 +13,7 @@
 - 📈 Статистика обнаружений
 
 ## Технологии
-- Python 3.10
+- Python 3.13
 - Flask
 - YOLOv8
 - OpenCV
@@ -35,26 +35,3 @@ pip install -r requirements.txt
 
 # Запустить приложение
 flask run
-
-Использование
-На главной странице загрузите изображение с жирафами
-Система автоматически обработает изображение
-Просматривайте результаты детекции
-Анализируйте историю запросов через раздел истории
-
-
-giraffe-counter/
-├── static/
-│   ├── css/
-│   │   ├── details.css
-│   │   ├── history.css
-│   │   └── main.css
-│   └── results/         # Папка для сохранения изображений
-├── templates/
-│   ├── history.html
-│   ├── index.html
-│   └── request_details.html
-├── .gitignore
-├── app.py               # Основное приложение
-├── README.md
-└── requirements.txt
