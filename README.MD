@@ -13,7 +13,7 @@
 - 📈 Статистика обнаружений
 
 ## 🛠️ Технологии
-- Python 3.13
+- Python
 - Flask
 - YOLOv8
 - OpenCV
